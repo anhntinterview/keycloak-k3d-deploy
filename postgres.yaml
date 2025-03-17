@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc-{{TODAY}}
+  namespace: keycloak-{{TODAY}}
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-{{TODAY}}
+  namespace: keycloak-{{TODAY}}
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: postgres-{{TODAY}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-{{TODAY}}
+  namespace: keycloak-{{TODAY}}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-{{TODAY}}
+  template:
+    metadata:
+      labels:
+        app: postgres-{{TODAY}}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "keycloak"
+            - name: POSTGRES_USER
+              value: "admin"
+            - name: POSTGRES_PASSWORD
+              value: "admin"
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-storage
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1"
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc-{{TODAY}}

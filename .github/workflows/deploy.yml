@@ -1,0 +1,45 @@
+name: Deploy Keycloak
+
+on:
+  push:
+    branches:
+      - deploy-keycloak
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github-deploy
+          chmod 600 ~/.ssh/github-deploy
+          ssh-keyscan -H 171.249.188.9 >> ~/.ssh/known_hosts
+
+      - name: Deploy to Ubuntu Server
+        run: |
+          ssh -o StrictHostKeyChecking=no ssre@171.249.188.9 << 'EOF'
+          set -e  # Dừng nếu có lỗi
+          export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+          TODAY=$(date +%Y%m%d)
+
+          echo "🔹 Tạo namespace tránh trùng lặp..."
+          kubectl create namespace keycloak-\$TODAY || true
+
+          echo "🔹 Thay thế biến TODAY trong YAML..."
+          export TODAY=\$TODAY
+
+          echo "🔹 Đang deploy Postgres..."
+          envsubst < postgres.yaml | kubectl apply -f -
+
+          echo "🔹 Đang deploy Keycloak..."
+          envsubst < keycloak.yaml | kubectl apply -f -
+
+          echo "🔹 Đang deploy Keycloak Service..."
+          envsubst < keycloak-service.yaml | kubectl apply -f -
+
+          echo "✅ Deploy hoàn tất!"
+          EOF

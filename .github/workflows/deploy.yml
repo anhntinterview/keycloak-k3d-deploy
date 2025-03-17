@@ -21,7 +21,7 @@ jobs:
 
       - name: Deploy to Ubuntu Server
         run: |
-          ssh -o StrictHostKeyChecking=no ssre@171.249.188.9 << 'EOF'
+          ssh -T -o StrictHostKeyChecking=no ssre@171.249.188.9 << 'EOF'
           set -e  # Dừng nếu có lỗi
           export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
           TODAY=$(date +%Y%m%d)
